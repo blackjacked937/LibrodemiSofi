@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Todo lo bonito del mundo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#080b1f;
+    --bg-page:#10142f;
+    --bg-page-2:#141939;
+    --ink:#f1eee3;
+    --ink-dim:#c9c6da;
+    --gold:#e7c579;
+    --gold-dim:#a9925a;
+    --lavender:#a89fe0;
+    --rose:#d98c9a;
+    --line:rgba(231,197,121,0.22);
+  }
+
+  *{box-sizing:border-box;}
+
+  html,body{
+    margin:0;
+    padding:0;
+    height:100%;
+    background:var(--bg-deep);
+    color:var(--ink);
+    font-family:'EB Garamond', serif;
+    overflow:hidden;
+  }
+
+  #stars-canvas{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:0;
+  }
+
+  .vignette{
+    position:fixed;
+    inset:0;
+    z-index:1;
+    pointer-events:none;
+    background:radial-gradient(ellipse at 50% 40%, rgba(8,11,31,0) 0%, rgba(8,11,31,0.55) 78%, rgba(8,11,31,0.85) 100%);
+  }
+
+  .stage{
+    position:relative;
+    z-index:2;
+    height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:6vh 5vw 12vh;
+  }
+
+  .book{
+    position:relative;
+    width:100%;
+    max-width:640px;
+    height:min(74vh, 720px);
+  }
+
+  .page{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    background:
+      radial-gradient(ellipse at 20% 0%, rgba(168,159,224,0.08), transparent 55%),
+      linear-gradient(180deg, var(--bg-page) 0%, var(--bg-page-2) 100%);
+    border:1px solid var(--line);
+    border-radius:6px;
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.4),
+      0 30px 70px -20px rgba(0,0,0,0.65),
+      0 0 60px -10px rgba(168,159,224,0.08);
+    padding:clamp(28px, 5vw, 56px) clamp(26px, 6vw, 60px);
+    opacity:0;
+    visibility:hidden;
+    transform:translateY(14px) scale(0.99);
+    transition:opacity 0.65s ease, transform 0.65s ease, visibility 0.65s;
+    overflow:hidden;
+  }
+
+  .page.active{
+    opacity:1;
+    visibility:visible;
+    transform:translateY(0) scale(1);
+  }
+
+  .page-head{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    margin-bottom:clamp(14px, 2.6vh, 22px);
+    flex-shrink:0;
+  }
+
+  .constellation{
+    width:46px;
+    height:46px;
+    flex-shrink:0;
+  }
+  .constellation circle{ fill:var(--gold); }
+  .constellation line{ stroke:var(--gold-dim); stroke-width:1; }
+
+  .head-text{ display:flex; flex-direction:column; gap:2px; }
+
+  .eyebrow{
+    font-family:'Jost', sans-serif;
+    font-size:11px;
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    color:var(--gold-dim);
+  }
+
+  .chapter-title{
+    font-family:'Cormorant Garamond', serif;
+    font-weight:600;
+    font-style:italic;
+    font-size:clamp(22px, 3.4vw, 30px);
+    color:var(--ink);
+    letter-spacing:0.01em;
+  }
+
+  .rule{
+    height:1px;
+    background:linear-gradient(90deg, var(--line), transparent);
+    margin-bottom:clamp(14px, 2.4vh, 20px);
+    flex-shrink:0;
+  }
+
+  .page-body{
+    flex:1;
+    overflow-y:auto;
+    padding-right:6px;
+    font-size:clamp(14.5px, 1.65vw, 16.5px);
+    line-height:1.72;
+    color:var(--ink-dim);
+  }
+  .page-body p{ margin:0 0 1.05em; }
+  .page-body p:first-of-type::first-letter{
+    font-family:'Cormorant Garamond', serif;
+    font-size:2.5em;
+    font-style:italic;
+    color:var(--gold);
+    float:left;
+    line-height:0.8;
+    padding-right:8px;
+    padding-top:4px;
+  }
+
+  .page-body::-webkit-scrollbar{ width:5px; }
+  .page-body::-webkit-scrollbar-thumb{ background:var(--line); border-radius:4px; }
+
+  /* Cover */
+  .cover{
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    background:
+      radial-gradient(ellipse at 50% 20%, rgba(168,159,224,0.14), transparent 60%),
+      linear-gradient(180deg, var(--bg-page) 0%, var(--bg-page-2) 100%);
+  }
+  .cover .eyebrow{ margin-bottom:18px; }
+  .cover-title{
+    font-family:'Cormorant Garamond', serif;
+    font-weight:500;
+    font-style:italic;
+    font-size:clamp(34px, 6.4vw, 56px);
+    color:var(--ink);
+    line-height:1.08;
+    margin:0 0 14px;
+  }
+  .cover-sub{
+    font-family:'EB Garamond', serif;
+    font-size:clamp(15px, 2vw, 18px);
+    color:var(--gold);
+    font-style:italic;
+    margin:0 0 26px;
+  }
+  .cover-note{
+    max-width:380px;
+    margin:0 auto 30px;
+    font-size:14.5px;
+    color:var(--ink-dim);
+    line-height:1.7;
+  }
+  .open-btn{
+    font-family:'Jost', sans-serif;
+    font-size:12px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    background:transparent;
+    color:var(--gold);
+    border:1px solid var(--gold-dim);
+    border-radius:999px;
+    padding:13px 30px;
+    cursor:pointer;
+    transition:background 0.3s, color 0.3s, box-shadow 0.3s;
+  }
+  .open-btn:hover{
+    background:var(--gold);
+    color:#1a1530;
+    box-shadow:0 0 24px rgba(231,197,121,0.35);
+  }
+
+  /* Closing page */
+  .closing{
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+  }
+  .closing-mark{
+    font-family:'Cormorant Garamond', serif;
+    font-style:italic;
+    font-size:clamp(26px, 4vw, 36px);
+    color:var(--ink);
+    margin:0 0 10px;
+  }
+  .closing-line{
+    font-size:15px;
+    color:var(--gold);
+    font-style:italic;
+    margin:0;
+  }
+
+  /* Controls */
+  .controls{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    z-index:3;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+    padding:0 5vw 3.4vh;
+    pointer-events:none;
+  }
+
+  .nav-row{
+    display:flex;
+    align-items:center;
+    gap:22px;
+    pointer-events:auto;
+  }
+
+  .nav-btn{
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:rgba(20,25,57,0.6);
+    color:var(--gold);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:border-color 0.25s, transform 0.2s, box-shadow 0.25s;
+    flex-shrink:0;
+  }
+  .nav-btn:hover{
+    border-color:var(--gold-dim);
+    box-shadow:0 0 18px rgba(231,197,121,0.2);
+  }
+  .nav-btn:active{ transform:scale(0.94); }
+  .nav-btn:disabled{ opacity:0.25; cursor:default; box-shadow:none; }
+  .nav-btn svg{ width:14px; height:14px; }
+
+  .dots{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    pointer-events:auto;
+  }
+  .dot{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:rgba(231,197,121,0.28);
+    border:none;
+    padding:0;
+    cursor:pointer;
+    transition:background 0.3s, transform 0.3s, box-shadow 0.3s;
+  }
+  .dot.filled{ background:var(--gold-dim); }
+  .dot.current{
+    background:var(--gold);
+    transform:scale(1.5);
+    box-shadow:0 0 10px rgba(231,197,121,0.6);
+  }
+  .dot.cover-dot, .dot.closing-dot{
+    width:4px; height:4px;
+    background:var(--lavender);
+    opacity:0.5;
+  }
+  .dot.cover-dot.current, .dot.closing-dot.current{
+    background:var(--lavender);
+    opacity:1;
+    transform:scale(1.6);
+    box-shadow:0 0 10px rgba(168,159,224,0.6);
+  }
+
+  .page-count{
+    font-family:'Jost', sans-serif;
+    font-size:10.5px;
+    letter-spacing:0.14em;
+    color:var(--gold-dim);
+    pointer-events:none;
+  }
+
+  @media (max-width:480px){
+    .book{ height:min(70vh, 640px); }
+    .stage{ padding:5vh 4vw 13vh; }
+    .nav-row{ gap:16px; }
+    .dots{ gap:6px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .page{ transition:opacity 0.2s linear; transform:none !important; }
+    .twinkle{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stars-canvas"></canvas>
+<div class="vignette"></div>
+
+<div class="stage">
+  <div class="book" id="book"></div>
+</div>
+
+<div class="controls">
+  <div class="nav-row">
+    <button class="nav-btn" id="prevBtn" aria-label="Página anterior">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <div class="dots" id="dots"></div>
+    <button class="nav-btn" id="nextBtn" aria-label="Página siguiente">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+  </div>
+  <div class="page-count" id="pageCount"></div>
+</div>
+
+<script>
+/* ---------- Starfield background ---------- */
+const canvas = document.getElementById('stars-canvas');
+const ctx = canvas.getContext('2d');
+let stars = [];
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const count = Math.floor((canvas.width * canvas.height) / 6500);
+  stars = Array.from({length: count}, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: Math.random() * 1.3 + 0.3,
+    baseAlpha: Math.random() * 0.5 + 0.25,
+    phase: Math.random() * Math.PI * 2,
+    speed: Math.random() * 0.015 + 0.005
+  }));
+}
+window.addEventListener('resize', resize);
+resize();
+
+let t = 0;
+function drawStars(){
+  ctx.clearRect(0,0,canvas.width, canvas.height);
+  for(const s of stars){
+    const a = reduceMotion ? s.baseAlpha : s.baseAlpha + Math.sin(t * s.speed + s.phase) * 0.25;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(241,238,227,${Math.max(0,a)})`;
+    ctx.fill();
+  }
+  t += 1;
+  requestAnimationFrame(drawStars);
+}
+drawStars();
+
+/* ---------- Constellation icon generator (unique per page) ---------- */
+function constellationSVG(seed){
+  const rand = (n) => {
+    const x = Math.sin(seed * 999 + n * 37.13) * 10000;
+    return x - Math.floor(x);
+  };
+  const pts = Array.from({length:5}, (_,i) => ({
+    x: 6 + rand(i) * 34,
+    y: 6 + rand(i+10) * 34
+  }));
+  let svg = `<svg class="constellation" viewBox="0 0 46 46" xmlns="http://www.w3.org/2000/svg">`;
+  for(let i=0;i<pts.length-1;i++){
+    svg += `<line x1="${pts[i].x}" y1="${pts[i].y}" x2="${pts[i+1].x}" y2="${pts[i+1].y}"/>`;
+  }
+  pts.forEach((p,i) => {
+    svg += `<circle cx="${p.x}" cy="${p.y}" r="${i===0?2.2:1.4}"/>`;
+  });
+  svg += `</svg>`;
+  return svg;
+}
+
+/* ---------- Book content ---------- */
+const chapters = [
+  {
+    title: "Por qué te escribo esto",
+    roman: "I",
+    paras: [
+      "Mi amor, llevo tiempo queriendo escribirte algo que no cupiera en un mensaje ni en una tarjeta, algo que tuviera que abrirse página por página, como se abren las cosas que de verdad importan. Así que decidí hacer esto: un libro pequeño donde te cuento todo lo bonito que existe en el mundo, porque desde que te conozco lo veo distinto.",
+      "Antes notaba las cosas a medias. El sol salía y yo apenas lo miraba, el café se enfriaba mientras revisaba el teléfono, las canciones sonaban de fondo sin que las escuchara de verdad. Vivía apurado, mirando el mundo de reojo. Y entonces llegaste tú, y sin proponértelo me enseñaste a detenerme. A mirar dos veces. A quedarme un segundo más frente a lo que es hermoso, solo para agradecerlo.",
+      "Por eso este libro no habla solo de ti, aunque tú estés en cada línea. Habla del amanecer, del mar, de las flores, de la música, de la gente buena, del tiempo que pasa. Habla de todas esas cosas que el mundo regala sin pedir nada a cambio, y que yo aprendí a ver mejor gracias a ti. Porque el amor, cuando es de verdad, no te encierra en una burbuja con la otra persona: te abre los ojos a todo lo demás. Te vuelve más atento, más agradecido, más despierto.",
+      "Quiero que cuando leas esto sientas que caminas conmigo por el mundo, deteniéndonos juntos a mirar lo que vale la pena mirar. No sé si voy a lograr poner en palabras todo lo que quiero decirte, pero voy a intentarlo, página por página, con la misma paciencia con la que tú me enseñaste a mirar las cosas despacio. Ven, tómate tu tiempo. Este libro es tuyo, mi amor, y todo lo bonito que hay en él, en el fondo, es un espejo de lo bonito que eres tú."
+    ]
+  },
+  {
+    title: "El amanecer y la luz",
+    roman: "II",
+    paras: [
+      "Hay algo que el mundo hace todos los días sin que casi nadie se dé cuenta: crea, desde cero, un amanecer distinto. Nunca se repite. El cielo prueba combinaciones de color que ningún pintor podría planear con tanta libertad: naranjas que se derraman sobre el horizonte, rosas que se mezclan con un azul todavía dormido, un dorado tímido que va despertando poco a poco hasta volverse luz plena. Y lo hace gratis, cada mañana, para quien quiera mirarlo.",
+      "Me gusta pensar en el amanecer como una promesa silenciosa. No importa lo difícil que haya sido el día anterior, el sol vuelve a salir. No pregunta si lo merecemos, no espera a que estemos listos. Simplemente aparece, puntual, generoso, y nos regala otra oportunidad de empezar de nuevo.",
+      "He aprendido a fijarme en los amaneceres gracias a ti. Antes dormía hasta tarde y me los perdía casi todos. Ahora, algunas mañanas, me despierto solo para ver cómo cambia el cielo, y pienso en cómo te gustaría a ti ese color exacto, esa nube que parece de algodón encendido, ese momento justo en que la noche se rinde ante el día.",
+      "También pienso en la luz de otras horas: la dorada de la tarde, que hace que todo se vea más cálido, como si el mundo entero se pusiera un filtro de ternura antes de despedirse. Y la luz de las ventanas encendidas en las noches de invierno, esa luz pequeña que promete un lugar tibio, gente esperando, una mesa servida.",
+      "Si pudiera regalarte un amanecer entero, mi amor, lo haría. Mientras tanto, te regalo estas palabras, y la promesa de que la próxima vez que veamos juntos uno, voy a mirarte a ti tanto como al cielo, porque entre los dos, la verdad, no sé cuál es más bonito de mirar."
+    ]
+  },
+  {
+    title: "El mar y el agua",
+    roman: "III",
+    paras: [
+      "El mar tiene una manera de hacerte sentir pequeño que no da miedo, sino paz. Te paras frente a él y de golpe tus problemas se ven distintos, más manejables, como si el agua tuviera el poder de poner las cosas en su tamaño real.",
+      "Me gusta el sonido del mar más que casi cualquier otro sonido del mundo. Ese murmullo de fondo que no exige nada, que simplemente está ahí, constante, como un latido enorme. Me gusta también el olor, esa mezcla de sal y humedad que se te queda pegada en la piel. Y me gusta el color, que nunca es un solo azul sino cientos de azules distintos según la hora y el humor del cielo ese día.",
+      "El agua, en general, tiene algo hipnótico. Un río que corre, una cascada, la lluvia golpeando una ventana: todo eso son pequeñas formas de belleza que casi no notamos. El agua nunca se queda quieta, siempre está yendo a algún lado, y aun así siempre es reconocible como lo que es. Creo que hay algo que aprender ahí, sobre cómo se puede cambiar constantemente sin dejar de ser uno mismo.",
+      "Pienso en las veces que hemos estado cerca del mar juntos, o en las que planeamos estarlo algún día. Meter los pies en el agua fría contigo, caminar por la orilla sin rumbo fijo, quedarnos en silencio mirando cómo el sol se hunde en el horizonte. Esos momentos son de los que uno guarda para siempre, no porque pase algo extraordinario, sino porque el mar tiene esa manera de hacer que hasta lo simple se sienta enorme.",
+      "Si el amor tuviera un sonido, yo elegiría el del mar: algo que llega, se queda un momento, se retira, y vuelve a llegar, una y otra vez, sin cansarse jamás. Así te quiero a ti también, con esa misma constancia tranquila."
+    ]
+  },
+  {
+    title: "Las flores y la primavera",
+    roman: "IV",
+    paras: [
+      "Hay una temporada del año en la que el mundo parece decidir que ya fue suficiente gris, y de un día para otro todo empieza a florecer. Los árboles que parecían secos se llenan de flores, el pasto recupera su verde más intenso, y hasta el aire cambia, se vuelve más suave.",
+      "Las flores me parecen uno de los inventos más generosos de la naturaleza. No existen para nada práctico, no alimentan, no protegen del frío. Existen, casi exclusivamente, para ser bonitas. Para que alguien las mire y sonría. Me parece un gesto hermoso del mundo: crear algo cuyo único propósito es la belleza misma.",
+      "Cada flor tiene su propio carácter. Los girasoles, tercos, siempre buscando el sol. Las rosas, elegantes pero con espinas, recordándonos que lo bonito a veces también sabe defenderse. Las margaritas, sencillas y alegres. Los jazmines, que no destacan por su color sino por su aroma, que se meten en una casa entera con solo una ramita en un florero.",
+      "La primavera, además de flores, trae una energía distinta. Los días se alargan, hay una sensación colectiva de que algo está empezando de nuevo. Es la estación en la que el mundo entero parece estar enamorándose de sí mismo otra vez, después del invierno.",
+      "Me gustaría llenarte de flores, mi amor, no solo las que se compran en una tienda, sino todas las que representan lo que siento: la constancia del girasol, la ternura de la margarita, el perfume que se queda en el aire del jazmín. Porque si hay algo que el mundo hace tan bien como florecer, es recordarnos que siempre hay espacio para que algo bonito vuelva a crecer."
+    ]
+  },
+  {
+    title: "El cielo nocturno y las estrellas",
+    roman: "V",
+    paras: [
+      "De noche el mundo cambia de show. Durante el día nos regala colores y movimiento; de noche nos regala silencio y una cantidad de estrellas que, si de verdad nos detuviéramos a contarlas, nos haría sentir diminutos y agradecidos a la vez. Cada una de esas luces es en realidad un sol lejanísimo, algunos tan lejanos que su luz tardó miles de años en llegar hasta nosotros. Cuando miramos las estrellas, en realidad estamos mirando el pasado.",
+      "Me fascina esa idea: que la luz que vemos hoy salió de esa estrella mucho antes de que tú o yo existiéramos, y que aun así llega justo a tiempo para que, en esta noche en particular, podamos mirarla juntos.",
+      "Las constelaciones también me parecen hermosas, no tanto por las estrellas en sí, sino por lo que dicen de nosotros: que somos una especie que necesita encontrar formas, historias, sentido en el caos. Frente a un cielo lleno de puntos aparentemente aleatorios, decidimos trazar líneas imaginarias y ver ahí un cazador, un oso, una balanza.",
+      "La luna tiene su propio encanto. Cambia de forma cada noche, casi como si necesitara reinventarse para que no nos aburramos de mirarla. Llena, se convierte en la protagonista absoluta del cielo. Nueva, se esconde por completo, dejando que las estrellas tengan su turno de brillar sin competencia.",
+      "Cuando pienso en nosotros, pienso también en el cielo nocturno. Como esas estrellas, a veces la luz de lo que sentimos tarda en notarse del todo, pero siempre llega. Quisiera, algún día, acostarme contigo en algún lugar oscuro, lejos de las luces de la ciudad, y simplemente mirar hacia arriba en silencio. El cielo, esa noche, hablaría por nosotros."
+    ]
+  },
+  {
+    title: "La música y las risas",
+    roman: "VI",
+    paras: [
+      "El mundo también es bonito por lo que suena. La música tiene ese poder extraño de meterse directo a las emociones sin pedir permiso. Basta con que suenen los primeros acordes de una canción para que de golpe estemos en otro lugar, en otro momento, sintiendo algo que hacía tiempo no sentíamos.",
+      "Hay canciones que son como cápsulas: guardan un verano entero, un viaje en carretera, una despedida. Basta con escucharlas años después para que todo vuelva, intacto. Y hay canciones que se vuelven nuestras sin que lo planeemos, que se convierten en la banda sonora de algo que estamos viviendo.",
+      "Pero si tuviera que elegir el sonido más bonito del mundo, elegiría la risa. La risa de verdad, la que se sale de control, la que no se puede fingir. Esa que te dobla, que te saca lágrimas, que hace que ya ni siquiera recuerdes qué fue tan gracioso. Es de las pocas cosas completamente honestas que nos quedan.",
+      "Me encanta tu risa en particular, mi amor, aunque este capítulo hable en teoría de todo el mundo. Me encanta cuando se te escapa sin que lo esperes, cuando intentas contenerla y no puedes. Si pudiera embotellar un sonido para tener siempre conmigo, sería exactamente ese.",
+      "Quiero seguir riéndome contigo durante mucho tiempo. Quiero que sigamos coleccionando canciones que después, al escucharlas, nos hagan mirarnos y sonreír sin decir nada, porque ambos sabremos exactamente a qué momento nos transportan. La música y la risa son, quizás, la prueba más clara de que el mundo también quiere que seamos felices."
+    ]
+  },
+  {
+    title: "Las estaciones y el paso del tiempo",
+    roman: "VII",
+    paras: [
+      "El mundo tiene una manera muy sabia de manejar el tiempo: no intenta quedarse siempre igual. Cambia de estación, se reinventa, y en ese cambio constante encuentra una belleza que la quietud nunca podría ofrecer. El invierno no es menos hermoso que el verano, solo es hermoso de otra manera.",
+      "El otoño tiene ese momento en el que las hojas, antes de caer, deciden lucirse por última vez, cambiando a colores intensos. Es casi como si la naturaleza entendiera que las despedidas merecen ser hermosas. Caminar sobre un piso cubierto de hojas secas, escuchando ese crujido bajo los pies, es de esos placeres simples que el mundo regala sin costo alguno.",
+      "El verano trae otra energía: días largos, ganas de estar afuera hasta tarde. Y el invierno, con su frío, nos regala la excusa perfecta para abrazarnos más fuerte, para valorar el calor de otro cuerpo cerca del nuestro de una manera que en verano casi ni notamos.",
+      "Me gusta pensar en nuestra relación como si también tuviera estaciones. Habrá primaveras en las que todo florezca fácil, veranos intensos, otoños de calma, e inviernos donde haga falta abrigarnos más el uno al otro. Así como el mundo no le teme al cambio de estación, porque sabe que después de cada invierno vuelve la primavera, quiero que nosotros tampoco le temamos a nuestros propios cambios.",
+      "El tiempo que pasa asusta a veces, pero también es lo que hace que las cosas importen. Es justo porque las flores se marchitan que las cuidamos mientras están. Y es, quizás, porque nos vamos haciendo viejos juntos, que cada día contigo se vuelve un poco más valioso que el anterior, mi amor."
+    ]
+  },
+  {
+    title: "Los pequeños momentos cotidianos",
+    roman: "VIII",
+    paras: [
+      "No todo lo bonito del mundo es grandioso. De hecho, creo que la mayoría de las cosas verdaderamente hermosas son pequeñas, silenciosas, fáciles de pasar por alto si uno va con prisa. El olor a café recién hecho en una cocina todavía medio dormida. Las sábanas limpias recién puestas en la cama. El sonido de la lluvia mientras uno está a salvo adentro.",
+      "Me gustan las manos: las que cocinan para alguien, las que escriben una carta, las que acomodan el pelo detrás de una oreja sin pensarlo. Hay tanta ternura en gestos tan pequeños que casi nadie se molesta en nombrarlos. Un abrazo que dura un segundo más de lo esperado. Un mensaje corto que llega justo en el momento en que uno más lo necesitaba.",
+      "También me parece bonito el ritual de las comidas compartidas. No importa si es una cena elaborada o pan comido de pie en la cocina: comer con alguien tiene algo de sagrado, una pausa que el mundo entero respeta.",
+      "Me gusta también el silencio compartido. No el incómodo, sino ese otro, el que solo existe entre dos personas que ya no necesitan llenar cada segundo con palabras. Estar en el mismo cuarto haciendo cosas distintas y sentir que aun así se está acompañado.",
+      "Contigo, mi amor, he aprendido a valorar exactamente este tipo de belleza: la que no sale en postales ni en fotos perfectas, la que pasa en la cocina, en el auto, en la cama antes de dormir, en un domingo sin planes. Si me preguntaras qué es lo más bonito que me ha pasado últimamente, probablemente sería alguno de estos pequeños instantes contigo."
+    ]
+  },
+  {
+    title: "Las personas y la bondad",
+    roman: "IX",
+    paras: [
+      "A veces, en medio de tantas noticias difíciles, es fácil olvidar que el mundo también está lleno de gente buena, haciendo cosas buenas, casi siempre sin que nadie las esté mirando. Un extraño que sostiene la puerta un segundo más. Alguien que cede su asiento sin que se lo pidan. Ninguno de esos gestos sale en ningún noticiero, pero juntos sostienen buena parte de lo que hace que valga la pena convivir con otros.",
+      "Me gusta observar a la gente en lugares públicos: un abuelo enseñándole algo con paciencia infinita a su nieto, dos amigas riéndose tan fuerte que contagian a toda la mesa de al lado. Son escenas pequeñas, anónimas, que nadie va a recordar dentro de un año, pero que en ese momento hacen del mundo un lugar un poco más amable.",
+      "También me parece hermosa la generosidad de quienes dan sin esperar nada a cambio: quien dona sangre sin conocer a quien la recibirá, quien cuida a un animal callejero como si fuera propio. La bondad silenciosa, la que no busca reconocimiento, me parece de las formas más puras de belleza humana.",
+      "Y luego está la bondad más cercana: los amigos que aparecen justo cuando se les necesita, sin que haya que explicarles demasiado. La familia que, con todas sus imperfecciones, sigue siendo un lugar al que volver.",
+      "Tú eres, sin duda, la persona más buena que conozco de cerca, mi amor. Te he visto ser paciente cuando nadie lo notaba, ser generosa sin que nadie lo pidiera, preocuparte genuinamente por gente que apenas conoces. Cada vez que dudo de que el mundo sea un lugar bueno, me basta con mirarte a ti para recordar que sí lo es."
+    ]
+  },
+  {
+    title: "El futuro, y tú como lo más bonito de todo",
+    roman: "X",
+    paras: [
+      "Llegamos a la última página, mi amor, y quiero terminar este libro con la verdad más simple y más grande que tengo: de todo lo bonito que existe en el mundo, del que ya te hablé y del que todavía me falta descubrir, lo más bonito que me ha pasado eres tú.",
+      "Pienso en el futuro y no pienso en detalles perfectos ni planes cerrados. Pienso, sobre todo, en seguir teniendo la oportunidad de ver el mundo contigo. Quiero ver más amaneceres a tu lado. Quiero meter los pies en más mares distintos contigo, aprender los nombres de más constelaciones juntos, aunque se nos olviden al día siguiente. Quiero seguir riéndome contigo hasta que nos duela el estómago.",
+      "Quiero envejecer viendo cómo cambian las estaciones a tu lado, sabiendo que después de cada invierno, literal o figurado, va a volver una primavera. Quiero seguir coleccionando pequeños momentos cotidianos contigo: cafés compartidos, silencios cómodos, manos que se buscan sin pensarlo.",
+      "El mundo es enorme y va a seguir siendo hermoso mucho después de que tú y yo no estemos para verlo. Eso, en vez de entristecerme, me hace valorar más el tiempo que sí tenemos. No sabemos cuántos amaneceres, cuántas canciones, cuántas risas nos toca compartir, y precisamente por eso no quiero dar ninguno por sentado.",
+      "Gracias, mi amor, por enseñarme a mirar mejor. Por convertirte, sin proponértelo, en la medida con la que ahora comparo toda la belleza del mundo. Este libro se termina aquí, pero lo que siento por ti no tiene última página. Cierra este libro cuando quieras, guárdalo, vuelve a él cuando lo necesites. Y recuerda siempre esto: de todo lo bonito que existe, tú sigues siendo, sin ninguna duda, lo más bonito que conozco."
+    ]
+  }
+];
+
+/* ---------- Build DOM ---------- */
+const book = document.getElementById('book');
+const totalSlides = chapters.length + 2; // cover + chapters + closing
+
+// Cover
+const cover = document.createElement('div');
+cover.className = 'page cover';
+cover.innerHTML = `
+  <div class="eyebrow">un libro para ti</div>
+  <h1 class="cover-title">Todo lo bonito<br>del mundo</h1>
+  <p class="cover-sub">para mi amor</p>
+  <p class="cover-note">Cada página guarda algo hermoso que el mundo me enseñó a ver mejor desde que estás en mi vida.</p>
+  <button class="open-btn" id="openBtn">Abrir el libro</button>
+`;
+book.appendChild(cover);
+
+// Chapters
+chapters.forEach((ch, i) => {
+  const el = document.createElement('div');
+  el.className = 'page';
+  el.innerHTML = `
+    <div class="page-head">
+      ${constellationSVG(i+1)}
+      <div class="head-text">
+        <div class="eyebrow">Capítulo ${ch.roman}</div>
+        <div class="chapter-title">${ch.title}</div>
+      </div>
+    </div>
+    <div class="rule"></div>
+    <div class="page-body">
+      ${ch.paras.map(p => `<p>${p}</p>`).join('')}
+    </div>
+  `;
+  book.appendChild(el);
+});
+
+// Closing
+const closing = document.createElement('div');
+closing.className = 'page closing';
+closing.innerHTML = `
+  ${constellationSVG(99)}
+  <p class="closing-mark">Fin del libro,<br>no de la historia.</p>
+  <p class="closing-line">Con todo mi amor.</p>
+`;
+book.appendChild(closing);
+
+const pages = Array.from(book.children);
+let current = 0;
+
+/* ---------- Dots ---------- */
+const dotsWrap = document.getElementById('dots');
+pages.forEach((_, i) => {
+  const d = document.createElement('button');
+  d.className = 'dot';
+  if(i === 0) d.classList.add('cover-dot');
+  if(i === pages.length - 1) d.classList.add('closing-dot');
+  d.setAttribute('aria-label', 'Ir a la página ' + (i+1));
+  d.addEventListener('click', () => goTo(i));
+  dotsWrap.appendChild(d);
+});
+const dotEls = Array.from(dotsWrap.children);
+
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const pageCount = document.getElementById('pageCount');
+
+function render(){
+  pages.forEach((p, i) => p.classList.toggle('active', i === current));
+  dotEls.forEach((d, i) => {
+    d.classList.toggle('current', i === current);
+    d.classList.toggle('filled', i < current);
+  });
+  prevBtn.disabled = current === 0;
+  nextBtn.disabled = current === pages.length - 1;
+  if(current === 0){
+    pageCount.textContent = 'Portada';
+  } else if(current === pages.length - 1){
+    pageCount.textContent = 'Cierre';
+  } else {
+    pageCount.textContent = `Capítulo ${current} de ${chapters.length}`;
+  }
+}
+
+function goTo(i){
+  current = Math.max(0, Math.min(pages.length - 1, i));
+  render();
+}
+
+document.getElementById('openBtn').addEventListener('click', () => goTo(1));
+prevBtn.addEventListener('click', () => goTo(current - 1));
+nextBtn.addEventListener('click', () => goTo(current + 1));
+
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'ArrowRight') goTo(current + 1);
+  if(e.key === 'ArrowLeft') goTo(current - 1);
+});
+
+render();
+</script>
+</body>
+</html>
